@@ -3,7 +3,7 @@ CREATE DATABASE IF NOT EXISTS cumt;
 
 CREATE TABLE IF NOT EXISTS cumt.user_tb (
   id int auto_increment,
-  username varchar(10) UNIQUE not null,
+  username varchar(10) UNIQUE,
   password varchar(200) NOT NULL,
   email varchar(20) NOT NULL UNIQUE,
   is_superuser int,

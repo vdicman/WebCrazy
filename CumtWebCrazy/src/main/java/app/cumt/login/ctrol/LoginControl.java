@@ -1,17 +1,14 @@
 package app.cumt.login.ctrol;
 
+import app.cumt.login.form.LoginForm;
 import app.cumt.login.form.User;
-import app.cumt.login.service.encryption.HashTools;
 import app.cumt.login.service.encryption.Jwt;
+import app.cumt.login.service.user.LoginState;
 import app.cumt.login.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.annotation.PostConstruct;
 
 /**
  * @Author Fizz Pu
@@ -20,32 +17,38 @@ import javax.servlet.http.HttpServletResponse;
  * 失之毫厘，缪之千里！
  */
 
-@RestController("/cumt/web")
-public class LoginControl {
 
+// 1.路径写在类上面，就不可达了
+// 2. 参数或取失败
+// 3. 请求与响应乱码问题
+
+@RestController
+@RequestMapping(produces = "application/json;charset=utf8")
+public class LoginControl {
     @Autowired
     UserService userService;
 
-    @RequestMapping(value = "/login", method = RequestMethod.POST)
-    public String getLogin(@RequestParam("email") String email, @RequestParam("psw") String psw) {
-        String format = "{\"code\":%s, \"msg\":%s,\"token\":%s, \"refreshtoken\":%s}";
+    // @RequestParam 参数总结
+    @RequestMapping(value = "/cumt/web/login", method = RequestMethod.POST)
+    public String getLogin(@RequestBody LoginForm form) {
+        String format = "{\"code\":%d, \"msg\":%s,\"token\":%s, \"refreshtoken\":%s}";
         String response, token, refreshToken;
-        User user = userService.searchUserByEmail(email);
-
+        LoginState state = userService.login(form);
         // 1. 校验参数是否为null
-        if (email == null || psw == null) {
+        if (state == LoginState.ParaError) {
             response  = String.format(format, 0, "未获得参数name或者email", "", "");
         }
         // 2. 未注册
-        else if (user == null) {
+        else if (state == LoginState.LoginNotRegister) {
             response = String.format(format, 1, "未注册", "", "");
         }
         // 3. 密码错误
-        else if (!user.getPassword().equals(HashTools.hashPsw(psw))) {
+        else if (state == LoginState.LoginPswIncorrect) {
             response = String.format(format,2, "密码错误", "", "");
         }
         // 4 帐号，密码正确，签发token, refreshToken
         else{
+             User user = userService.searchUserByEmail(form.getEmail());
              token = Jwt.getToken(user.getId());
              refreshToken = Jwt.getRefreshToken(user.getId());
              response = String.format(format, 200, "登录成功", token, refreshToken);
@@ -54,7 +57,7 @@ public class LoginControl {
     }
 
     @RequestMapping(value = "/register", method = RequestMethod.POST)
-    public String getRegister(User user) {
+    public String getRegister(@RequestBody User user) {
         String format =  "{\"code\":%s, \"msg\":%s,\"token\":%s, \"refreshtoken\":%s}", response="";
         String token="", refreshToken="";
         switch (userService.register(user)){
@@ -71,4 +74,8 @@ public class LoginControl {
         return response;
     }
 
+    @PostConstruct
+    void init(){
+        System.out.println("LoginControl初始化成功");
+    }
 }

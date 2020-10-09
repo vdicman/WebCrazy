@@ -1,23 +1,16 @@
 package app.cumt.login.service.user;
 
+import app.cumt.login.form.LoginForm;
 import app.cumt.login.form.User;
 import app.cumt.login.service.DataService.DataService;
 import app.cumt.login.service.encryption.HashTools;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import javax.imageio.spi.RegisterableService;
-
-import org.apache.log4j.Logger;
-
-import java.util.Queue;
 
 /**
  * @Author Fizz Pu
@@ -28,11 +21,36 @@ import java.util.Queue;
 
 @Component
 public class UserService implements AbstractUserService {
-    public static enum RegisterState{
-        userNameRepeated, userEmailRepeated, registerSuccess
-    }
+
     @Autowired
     DataService dataService;
+
+    @Override
+    public LoginState login(LoginForm loginForm){
+        // 参数检查
+        Session session = dataService.getSession();
+        String hq = "from User where email = : email";
+        Query<User> query = session.createQuery(hq);
+        query.setParameter("email",  loginForm.getEmail());
+        User user;
+
+        // 0.参数异常
+        if(loginForm.getEmail() == null || loginForm.getPsw() == null){
+            return LoginState.ParaError;
+        }
+        // 1. 未注册
+        else if ((user = query.uniqueResult()) == null) {
+            return LoginState.LoginNotRegister;
+        }
+        // 3. 密码错误
+        else if (!user.getPassword().equals(HashTools.hashPsw(loginForm.getPsw()))) {
+            return  LoginState.LoginPswIncorrect;
+        }
+        // 4 帐号，密码正确
+        else{
+            return LoginState.LoginSuccess;
+        }
+    }
 
 
     /**
@@ -40,14 +58,14 @@ public class UserService implements AbstractUserService {
      * @param email
      * @return
      */
-    @Override
     public User searchUserByEmail(String email) {
         Session session = dataService.getSession();
         String hq = "from User where email = : email";
         Query<User> query = session.createQuery(hq);
         query.setParameter("email",  email);
+        User res = query.uniqueResult();
         session.close();
-        return query.uniqueResult();
+        return res;
     }
 
     public RegisterState register(User user) {
@@ -61,13 +79,14 @@ public class UserService implements AbstractUserService {
         queryUsername.setParameter("userName", user.getUsername());
         queryEamil.setParameter("email", user.getEmail());
         if(queryUsername.uniqueResult() != null)return RegisterState.userEmailRepeated;
-        if(queryEamil.uniqueResult() != null)return RegisterState.userEmailRepeated;
-        // 保存
-        Transaction ts = session.beginTransaction();
-        session.save(user);
-        ts.commit();
-        session.close();
-        return RegisterState.registerSuccess;
+        else if(queryEamil.uniqueResult() != null)return RegisterState.userEmailRepeated;
+        else {
+            Transaction ts = session.beginTransaction();
+            session.save(user);
+            ts.commit();
+            session.close();
+            return RegisterState.registerSuccess;
+        }
     }
 
     @Override

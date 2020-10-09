@@ -17,7 +17,7 @@ import javax.annotation.PostConstruct;
 
 @Configuration
 @ComponentScan // 自动搜索当前类所在的包和所在的子包
-@EnableWebMvc  // 激活mvc
+// @EnableWebMvc  // 激活mvc
 public class AppConfig {
 
     /**

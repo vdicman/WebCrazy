@@ -8,4 +8,9 @@
     <!--扫描Service实现类-->
     <!--app包下所有类及其子包被扫描-->
     <context:component-scan base-package="app"/>
+
+    <!--处理form data方式提交的post数据-->
+    <bean id="multipartResolver"
+          class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+    </bean>
 </beans>
